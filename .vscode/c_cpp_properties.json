@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Mac",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/usr/local/include",
+        "/opt/homebrew/Cellar/gcc/15.2.0_1/include/c++/15/aarch64-apple-darwin24/",
+        "/opt/homebrew/include"
+      ],
+      "defines": [],
+      "compilerPath": "/opt/homebrew/bin/g++-15",
+      "cStandard": "c17",
+      "cppStandard": "c++14",
+      "intelliSenseMode": "macos-gcc-arm64"
+    }
+  ],
+  "version": 4
+}
