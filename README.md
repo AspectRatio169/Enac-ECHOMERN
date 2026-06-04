@@ -2,6 +2,7 @@
 
 **E-Waste Collection Hub Operation**  
 A sustainable e-waste initiative by Enactus NSUT.
+**NOTE** Change env.local to .env
 
 ## Tech Stack
 
@@ -92,4 +93,4 @@ src
 
 **Colors:** Moss green (`#2D4A22`), Leaf (`#4A7C59`), Sage (`#8FAF7E`), Cream (`#F5F0E8`)  
 **Fonts:** Syne (display), DM Sans (body), Space Mono (mono/labels)
-"# Enac-ECHO" 
+"# Enac-ECHO"
