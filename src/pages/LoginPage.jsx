@@ -1,19 +1,35 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Leaf, Mail, User, AlertCircle, Send } from "lucide-react";
 import { useAuth } from "../lib/useAuth";
-
+import { account } from "../lib/appwrite";
 const NSUT_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@nsut\.ac\.in$/i;
-const DEV_ALLOWLIST = ["kulshresthaprankush@gmail.com", "jojot3750@gmail.com", "iitjee202312345@gmail.com"];
+const DEV_ALLOWLIST = [
+  "kulshresthaprankush@gmail.com",
+  "jojot3750@gmail.com",
+  "iitjee202312345@gmail.com",
+];
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("error") === "email_not_allowed"
+      ? "Only @nsut.ac.in email addresses are allowed."
+      : "",
+  );
   const [sent, setSent] = useState(false);
   const { login } = useAuth();
 
+  async function handleGoogleLogin() {
+    await account.createOAuth2Token(
+      "google",
+      `${window.location.origin}/verify-oauth`,
+      `${window.location.origin}/login`,
+    );
+  }
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -167,7 +183,20 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          {/* divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px bg-eco-100" />
+            <span className="font-mono text-xs text-bark/35">or</span>
+            <div className="flex-1 h-px bg-eco-100" />
+          </div>
 
+          {/* Google button stays outside form */}
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 border-2 border-eco-100 rounded-2xl py-3 font-display font-semibold text-sm text-bark/70 hover:border-moss/40 hover:text-moss transition-all duration-200"
+          >
+            Continue with Google
+          </button>
           <p className="text-center font-body text-xs text-bark/40 mt-6">
             A new account will be created automatically on first sign-in.
           </p>
