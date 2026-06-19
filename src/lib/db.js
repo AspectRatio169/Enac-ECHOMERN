@@ -1,3 +1,4 @@
+import { account } from "./appwrite";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const ITEM_POINTS = {
@@ -14,15 +15,31 @@ export const ITEM_POINTS = {
 };
 
 async function _call(method, path, body = null) {
-  const jwt = localStorage.getItem("echo_jwt");
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  let jwt = localStorage.getItem("echo_jwt");
+
+  const doFetch = async (token) => {
+    return fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  };
+
+  let res = await doFetch(jwt);
+
+  if (res.status === 401) {
+    try {
+      const fresh = await account.createJWT();
+      localStorage.setItem("echo_jwt", fresh.jwt);
+      res = await doFetch(fresh.jwt);
+    } catch {
+      // session itself is dead — let the original 401 surface
+    }
+  }
+
   const data = await res.json();
   if (!data.success) throw new Error(data.error || "Server error.");
   return data.data;
