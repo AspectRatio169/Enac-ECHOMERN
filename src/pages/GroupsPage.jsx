@@ -26,21 +26,11 @@ import {
   getGroupAchievements,
 } from "../lib/db";
 
-// ── GROUP CREDITS EXPLAINER ───────────────────────────────
-// totalPoints on a group = group credits (leaderboard display only).
-// They are NOT spendable points. Individual eco-points (useable for
-// rewards) are credited separately via the group bonus mechanism:
-// for every 10 group credits gained, each qualifying member receives
-// 1 eco-point added to their personal balance.
-
 const MAX_MEMBERS = 4;
-const BONUS_INTERVAL = 100; // group credits per bonus trigger
-const BONUS_PER_MEMBER = 1; // eco-points awarded per trigger
+const BONUS_INTERVAL = 100;
+const BONUS_PER_MEMBER = 1;
 
-// Only these milestone credit totals are shown in the achievements tab.
-// Bonuses still trigger server-side every 100 credits beyond 1000,
-// but they are not displayed to keep the UI clean.
-const DISPLAY_MILESTONES = new Set([1, 5, 10]); // milestone numbers (credits / 100) → shows 100, 500, 1000
+const DISPLAY_MILESTONES = new Set([1, 5, 10]);
 
 export default function GroupsPage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -57,7 +47,7 @@ export default function GroupsPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMsg, setInviteMsg] = useState("");
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("group"); // 'group' | 'leaderboard' | 'achievements'
+  const [activeTab, setActiveTab] = useState("group");
 
   useEffect(() => {
     loadAll();
@@ -77,16 +67,15 @@ export default function GroupsPage() {
         getGroupLeaderboard(),
         user
           ? getPendingInvites(profile?.email || user.email)
-          : Promise.resolve({ documents: [] }),
+          : Promise.resolve([]),
       ]);
-      setGroups(fetchedGroups);
+      setGroups(fetchedGroups ?? []);
       setLeaderboard(lb ?? []);
       setInvites(inv ?? []);
       setActiveGroupIdx((i) =>
-        Math.min(i, Math.max(fetchedGroups.length - 1, 0)),
+        Math.min(i, Math.max((fetchedGroups?.length || 1) - 1, 0)),
       );
 
-      // Load group achievements if in a group
       if (gId) {
         try {
           const ach = await getGroupAchievements(gId);
@@ -126,7 +115,7 @@ export default function GroupsPage() {
     setError("");
     setCreating(true);
     try {
-      const newGroup = await createGroup(trimmedName, user._id);
+      const newGroup = await createGroup(trimmedName);
       await refreshProfile();
       setGroups([newGroup]);
       setActiveGroupIdx(0);
@@ -146,7 +135,7 @@ export default function GroupsPage() {
     setInviteMsg("");
     setError("");
     const activeGroup = groups[activeGroupIdx];
-    const memberCount = JSON.parse(activeGroup?.memberIds || "[]").length;
+    const memberCount = (activeGroup?.memberIds || []).length;
 
     if (memberCount >= MAX_MEMBERS) {
       setError(
@@ -180,11 +169,10 @@ export default function GroupsPage() {
       );
       return;
     }
-    // Check target group capacity
     try {
       const targetGroups = await getGroups([invite.groupId]);
       if (targetGroups.length > 0) {
-        const members = JSON.parse(targetGroups[0].memberIds || "[]");
+        const members = targetGroups[0].memberIds || [];
         if (members.length >= MAX_MEMBERS) {
           setError(`This group is already full (${MAX_MEMBERS} members max).`);
           return;
@@ -225,12 +213,9 @@ export default function GroupsPage() {
   }
 
   const activeGroup = groups[activeGroupIdx] || null;
-  const memberCount = activeGroup
-    ? JSON.parse(activeGroup.memberIds || "[]").length
-    : 0;
+  const memberCount = activeGroup ? (activeGroup.memberIds || []).length : 0;
   const groupFull = memberCount >= MAX_MEMBERS;
 
-  // How many bonus milestones has this group hit so far
   const bonusMilestones = activeGroup
     ? Math.floor((activeGroup.totalPoints || 0) / BONUS_INTERVAL)
     : 0;
@@ -252,7 +237,6 @@ export default function GroupsPage() {
           </p>
         </div>
 
-        {/* How bonuses work — info banner */}
         <div className="bg-eco-50 border border-eco-100 rounded-2xl p-4 mb-6 flex items-start gap-3">
           <Info className="w-4 h-4 text-moss shrink-0 mt-0.5" />
           <div className="font-body text-xs text-bark/70 leading-relaxed">
@@ -287,9 +271,7 @@ export default function GroupsPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ── LEFT COLUMN ── */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Pending invites */}
             {invites.length > 0 && (
               <div className="bg-white rounded-3xl border border-eco-100 p-7">
                 <h2 className="font-display font-semibold text-moss mb-4 flex items-center gap-2">
@@ -362,7 +344,6 @@ export default function GroupsPage() {
               </div>
             ) : (
               <>
-                {/* Group selector + create button */}
                 <div className="flex items-center gap-2 flex-wrap">
                   {groups.map((g, idx) => (
                     <button
@@ -388,7 +369,6 @@ export default function GroupsPage() {
                   )}
                 </div>
 
-                {/* Create group form */}
                 {showCreate && !alreadyInGroup && (
                   <div className="bg-white rounded-3xl border border-eco-100 p-7">
                     <div className="w-10 h-10 bg-eco-100 rounded-2xl flex items-center justify-center mb-4">
@@ -430,10 +410,8 @@ export default function GroupsPage() {
                   </div>
                 )}
 
-                {/* Active group panel */}
                 {activeGroup && (
                   <div className="bg-white rounded-3xl border border-eco-100 overflow-hidden">
-                    {/* Tabs */}
                     <div className="flex border-b border-eco-100">
                       {[
                         { id: "group", label: "My Group" },
@@ -473,10 +451,8 @@ export default function GroupsPage() {
                       ))}
                     </div>
 
-                    {/* ── MY GROUP TAB ── */}
                     {activeTab === "group" && (
                       <div className="p-7">
-                        {/* Header */}
                         <div className="flex items-start justify-between mb-6">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
@@ -515,7 +491,6 @@ export default function GroupsPage() {
                           </div>
                         </div>
 
-                        {/* Next bonus progress */}
                         {(() => {
                           const pts = activeGroup.totalPoints || 0;
                           const nextMilestone =
@@ -549,7 +524,6 @@ export default function GroupsPage() {
                           );
                         })()}
 
-                        {/* Invite */}
                         <div className="border-t border-eco-100 pt-6">
                           <h3 className="font-display font-semibold text-sm text-moss mb-3">
                             Invite a Member
@@ -610,7 +584,6 @@ export default function GroupsPage() {
                       </div>
                     )}
 
-                    {/* ── GROUP ACHIEVEMENTS TAB ── */}
                     {activeTab === "achievements" && (
                       <div className="p-7">
                         <div className="flex items-center gap-2 mb-2">
@@ -686,7 +659,6 @@ export default function GroupsPage() {
                                           year: "numeric",
                                         })}
                                       </p>
-                                      {/* Per-member breakdown */}
                                       {ach.recipients &&
                                         ach.recipients.length > 0 && (
                                           <div className="mt-2 ml-8 space-y-1">
@@ -726,7 +698,6 @@ export default function GroupsPage() {
                                       </span>
                                     </div>
                                   </div>
-                                  {/* Warnings for non-qualifying members */}
                                   {ach.warnings && ach.warnings.length > 0 && (
                                     <div className="mt-3 space-y-1 ml-8">
                                       {ach.warnings.map((w, i) => (
@@ -751,7 +722,6 @@ export default function GroupsPage() {
                   </div>
                 )}
 
-                {/* No groups yet */}
                 {groups.length === 0 && !showCreate && (
                   <div className="bg-white rounded-3xl border border-eco-100 p-10 text-center">
                     <div className="w-14 h-14 bg-eco-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -772,7 +742,6 @@ export default function GroupsPage() {
             )}
           </div>
 
-          {/* ── RIGHT COLUMN: LEADERBOARD ── */}
           <div className="bg-white rounded-3xl border border-eco-100 p-7 h-fit">
             <div className="flex items-center gap-2 mb-2">
               <Trophy className="w-5 h-5 text-moss" strokeWidth={1.5} />
@@ -800,7 +769,7 @@ export default function GroupsPage() {
               <div className="space-y-2">
                 {leaderboard.map((g, index) => {
                   const isMyGroup = currentGroupId === g._id;
-                  const members = JSON.parse(g.memberIds || "[]").length;
+                  const members = (g.memberIds || []).length;
                   return (
                     <div
                       key={g._id}
