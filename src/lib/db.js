@@ -1,4 +1,3 @@
-import { account } from "./appwrite";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const ITEM_POINTS = {
@@ -15,30 +14,16 @@ export const ITEM_POINTS = {
 };
 
 async function _call(method, path, body = null) {
-  let jwt = localStorage.getItem("echo_jwt");
+  const jwt = localStorage.getItem("echo_jwt");
 
-  const doFetch = async (token) => {
-    return fetch(`${API_URL}${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-  };
-
-  let res = await doFetch(jwt);
-
-  if (res.status === 401) {
-    try {
-      const fresh = await account.createJWT();
-      localStorage.setItem("echo_jwt", fresh.jwt);
-      res = await doFetch(fresh.jwt);
-    } catch {
-      // session itself is dead — let the original 401 surface
-    }
-  }
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
 
   const data = await res.json();
   if (!data.success) throw new Error(data.error || "Server error.");
@@ -46,24 +31,12 @@ async function _call(method, path, body = null) {
 }
 
 // ── USERS ─────────────────────────────────────────────────
-export async function resolveUser(email) {
-  return _call("POST", "/api/users/resolve", { email });
-}
-
-export async function createUserProfile(name, email, userId = null) {
-  return _call("POST", "/api/users/create-profile", { name, email, userId });
-}
-
 export async function getUserProfile() {
   return _call("GET", "/api/users/profile");
 }
 
 export async function updateUserProfile(name) {
   return _call("PUT", "/api/users/profile", { name });
-}
-
-export async function setVerified(name = "") {
-  return _call("POST", "/api/users/set-verified", { name });
 }
 
 export async function getAllUsers() {
