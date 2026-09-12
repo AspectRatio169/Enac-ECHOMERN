@@ -24,6 +24,7 @@ import {
   leaveGroup,
   getGroupLeaderboard,
   getGroupAchievements,
+  getMembers
 } from "../lib/db";
 
 const MAX_MEMBERS = 4;
@@ -48,7 +49,7 @@ export default function GroupsPage() {
   const [inviteMsg, setInviteMsg] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("group");
-
+  const [members, setMembers] = useState([]);
   useEffect(() => {
     loadAll();
   }, [profile]);
@@ -80,6 +81,7 @@ export default function GroupsPage() {
         try {
           const ach = await getGroupAchievements(gId);
           setAchievements(ach ?? []);
+          getGroupMembers(gId);
         } catch {
           setAchievements([]);
         }
@@ -178,7 +180,7 @@ export default function GroupsPage() {
           return;
         }
       }
-    } catch {}
+    } catch { }
 
     try {
       await acceptInvite(invite._id, user._id, invite.groupId);
@@ -209,6 +211,15 @@ export default function GroupsPage() {
       setActiveTab("group");
     } catch (e) {
       setError(e.message);
+    }
+  }
+
+  async function getGroupMembers(groupId) {
+    try {
+      const members = await getMembers(groupId)
+      setMembers(members)
+    } catch (e) {
+      setError(e.message)
     }
   }
 
@@ -349,11 +360,10 @@ export default function GroupsPage() {
                     <button
                       key={g._id}
                       onClick={() => setActiveGroupIdx(idx)}
-                      className={`px-4 py-2 rounded-2xl font-display font-semibold text-sm transition-all duration-200 ${
-                        activeGroupIdx === idx
-                          ? "bg-moss text-cream shadow-sm"
-                          : "bg-white border border-eco-100 text-bark/65 hover:border-moss/40"
-                      }`}
+                      className={`px-4 py-2 rounded-2xl font-display font-semibold text-sm transition-all duration-200 ${activeGroupIdx === idx
+                        ? "bg-moss text-cream shadow-sm"
+                        : "bg-white border border-eco-100 text-bark/65 hover:border-moss/40"
+                        }`}
                     >
                       {g.name}
                     </button>
@@ -420,18 +430,17 @@ export default function GroupsPage() {
                         <button
                           key={t.id}
                           onClick={() => setActiveTab(t.id)}
-                          className={`flex-1 py-3.5 font-display font-semibold text-sm transition-colors duration-200 ${
-                            activeTab === t.id
-                              ? "text-moss border-b-2 border-moss bg-eco-50/50"
-                              : "text-bark/50 hover:text-bark/70"
-                          }`}
+                          className={`flex-1 py-3.5 font-display font-semibold text-sm transition-colors duration-200 ${activeTab === t.id
+                            ? "text-moss border-b-2 border-moss bg-eco-50/50"
+                            : "text-bark/50 hover:text-bark/70"
+                            }`}
                         >
                           {t.id === "achievements" &&
                             achievements.filter(
                               (a) =>
                                 DISPLAY_MILESTONES.has(a.milestone) &&
                                 a.milestone * BONUS_INTERVAL <=
-                                  (activeGroup?.totalPoints || 0) &&
+                                (activeGroup?.totalPoints || 0) &&
                                 a.totalAwarded > 0,
                             ).length > 0 && (
                               <span className="inline-flex items-center justify-center w-4 h-4 bg-eco-500 text-white text-xs rounded-full mr-1.5 font-mono">
@@ -440,7 +449,7 @@ export default function GroupsPage() {
                                     (a) =>
                                       DISPLAY_MILESTONES.has(a.milestone) &&
                                       a.milestone * BONUS_INTERVAL <=
-                                        (activeGroup?.totalPoints || 0) &&
+                                      (activeGroup?.totalPoints || 0) &&
                                       a.totalAwarded > 0,
                                   ).length
                                 }
@@ -474,6 +483,13 @@ export default function GroupsPage() {
                                 </span>
                               )}
                             </p>
+                            {members.map((member) => (
+                              <div key={member._id} className="flex items-center gap-2">
+                                <span className="font-mono text-xs bg-eco-100 text-eco-700 px-2 py-0.5 rounded-full">
+                                  {member.name}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                           <div className="text-right">
                             <div className="font-display font-bold text-2xl text-eco-600">
@@ -603,7 +619,7 @@ export default function GroupsPage() {
                           (a) =>
                             DISPLAY_MILESTONES.has(a.milestone) &&
                             a.milestone * BONUS_INTERVAL <=
-                              (activeGroup.totalPoints || 0) &&
+                            (activeGroup.totalPoints || 0) &&
                             a.totalAwarded > 0,
                         ).length === 0 ? (
                           <div className="text-center py-10">
@@ -628,7 +644,7 @@ export default function GroupsPage() {
                                 (ach) =>
                                   DISPLAY_MILESTONES.has(ach.milestone) &&
                                   ach.milestone * BONUS_INTERVAL <=
-                                    (activeGroup.totalPoints || 0) &&
+                                  (activeGroup.totalPoints || 0) &&
                                   ach.totalAwarded > 0,
                               )
                               .map((ach) => (
@@ -668,11 +684,10 @@ export default function GroupsPage() {
                                                 className="flex items-center gap-2"
                                               >
                                                 <span
-                                                  className={`font-mono text-xs px-2 py-0.5 rounded-full ${
-                                                    r.awarded
-                                                      ? "bg-eco-100 text-eco-700"
-                                                      : "bg-bark/5 text-bark/40 line-through"
-                                                  }`}
+                                                  className={`font-mono text-xs px-2 py-0.5 rounded-full ${r.awarded
+                                                    ? "bg-eco-100 text-eco-700"
+                                                    : "bg-bark/5 text-bark/40 line-through"
+                                                    }`}
                                                 >
                                                   {r.name || r.userId}
                                                 </span>

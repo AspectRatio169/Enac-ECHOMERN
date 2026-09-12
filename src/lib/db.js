@@ -190,6 +190,9 @@ export async function getGroupAchievements(groupId) {
   return _call('GET', `/api/groups/${groupId}/achievements`)
 }
 
+export async function getMembers(groupId) {
+  return _call('GET', `/api/groups/${groupId}/members`)
+}
 // ── CMS ───────────────────────────────────────────────────
 export async function getCmsContent(key) {
   // Public — no auth token needed
