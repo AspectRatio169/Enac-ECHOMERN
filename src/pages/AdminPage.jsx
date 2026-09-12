@@ -118,11 +118,10 @@ function LogoUpload({ value, onChange }) {
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            className={`w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-colors text-xs font-body ${
-              dragOver
-                ? "border-moss bg-eco-50 text-moss"
-                : "border-eco-100 text-bark/40 hover:border-moss/50 hover:text-moss/70"
-            }`}
+            className={`w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-colors text-xs font-body ${dragOver
+              ? "border-moss bg-eco-50 text-moss"
+              : "border-eco-100 text-bark/40 hover:border-moss/50 hover:text-moss/70"
+              }`}
           >
             <Upload className="w-3.5 h-3.5 shrink-0" />
             {isBase64 ? "Replace image" : "Upload image"}
@@ -225,7 +224,7 @@ function VerifyDialog({ submission, onApprove, onReject, onClose, isOwn }) {
             ))}
           </div>
           <p className="font-mono text-xs text-bark/40 mt-1">
-            {submission.totalPoints} pts ·{" "}
+            {submission.totalPoints} pts · Bag Number{submission.bagNumber} ·{" "}
             {new Date(submission.submittedAt).toLocaleDateString("en-IN", {
               day: "numeric",
               month: "short",
@@ -250,13 +249,12 @@ function VerifyDialog({ submission, onApprove, onReject, onClose, isOwn }) {
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
               placeholder="ECHO-XXXX-XXXX-XXXX-XXXX"
-              className={`w-full px-4 py-3 border-2 rounded-2xl font-mono text-sm focus:outline-none transition-colors mb-2 ${
-                inputCode === ""
-                  ? "border-eco-100 bg-cream/50"
-                  : codeMatches
-                    ? "border-eco-400 bg-eco-50 text-eco-700"
-                    : "border-red-200 bg-red-50 text-red-700"
-              }`}
+              className={`w-full px-4 py-3 border-2 rounded-2xl font-mono text-sm focus:outline-none transition-colors mb-2 ${inputCode === ""
+                ? "border-eco-100 bg-cream/50"
+                : codeMatches
+                  ? "border-eco-400 bg-eco-50 text-eco-700"
+                  : "border-red-200 bg-red-50 text-red-700"
+                }`}
             />
             {inputCode !== "" && (
               <p
@@ -745,11 +743,10 @@ function AddRewardForm({ onCreated, onCancel }) {
                   key={opt.value}
                   type="button"
                   onClick={() => set("rewardType", opt.value)}
-                  className={`text-left p-3 rounded-2xl border-2 transition-all ${
-                    form.rewardType === opt.value
-                      ? "border-moss bg-eco-50"
-                      : "border-eco-100 bg-cream/50 hover:border-moss/40"
-                  }`}
+                  className={`text-left p-3 rounded-2xl border-2 transition-all ${form.rewardType === opt.value
+                    ? "border-moss bg-eco-50"
+                    : "border-eco-100 bg-cream/50 hover:border-moss/40"
+                    }`}
                 >
                   <p
                     className={`font-display font-semibold text-xs ${form.rewardType === opt.value ? "text-moss" : "text-bark/60"}`}
@@ -796,11 +793,10 @@ function AddRewardForm({ onCreated, onCancel }) {
               />
             ) : (
               <div
-                className={`w-full px-4 py-2.5 border-2 rounded-xl font-mono text-sm flex items-center gap-2 transition-colors ${
-                  quantity > 0
-                    ? "border-eco-300 bg-eco-50 text-eco-700"
-                    : "border-eco-100 bg-cream/30 text-bark/35"
-                }`}
+                className={`w-full px-4 py-2.5 border-2 rounded-xl font-mono text-sm flex items-center gap-2 transition-colors ${quantity > 0
+                  ? "border-eco-300 bg-eco-50 text-eco-700"
+                  : "border-eco-100 bg-cream/30 text-bark/35"
+                  }`}
               >
                 <Hash className="w-3.5 h-3.5 shrink-0" />
                 {quantity > 0
@@ -974,7 +970,7 @@ function SponsorLogoUpload({ value, onChange }) {
       const MAX = 200;
       const scale = Math.min(MAX / img.width, MAX / img.height, 1);
       const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
+      canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
       onChange(canvas.toDataURL("image/webp", 0.85));
@@ -1019,18 +1015,18 @@ function ContentTab() {
   const { homepage, aboutpage, global: globalContent, refreshKey } = useSiteContent();
 
   // ── Local draft state ───────────────────────────────────────────────────────
-  const [hp,  setHp]  = useState(() => JSON.parse(JSON.stringify(homepage)));
-  const [ab,  setAb]  = useState(() => JSON.parse(JSON.stringify(aboutpage)));
-  const [gl,  setGl]  = useState(() => JSON.parse(JSON.stringify(globalContent)));
+  const [hp, setHp] = useState(() => JSON.parse(JSON.stringify(homepage)));
+  const [ab, setAb] = useState(() => JSON.parse(JSON.stringify(aboutpage)));
+  const [gl, setGl] = useState(() => JSON.parse(JSON.stringify(globalContent)));
 
   // Saving/saved states per section key
   const [saving, setSaving] = useState({});
-  const [saved,  setSaved]  = useState({});
+  const [saved, setSaved] = useState({});
   const [cmsErr, setCmsErr] = useState("");
 
   // Keep local draft in sync when context refreshes (e.g. after seed)
-  useEffect(() => { setHp(JSON.parse(JSON.stringify(homepage))); },  [homepage]);
-  useEffect(() => { setAb(JSON.parse(JSON.stringify(aboutpage))); },  [aboutpage]);
+  useEffect(() => { setHp(JSON.parse(JSON.stringify(homepage))); }, [homepage]);
+  useEffect(() => { setAb(JSON.parse(JSON.stringify(aboutpage))); }, [aboutpage]);
   useEffect(() => { setGl(JSON.parse(JSON.stringify(globalContent))); }, [globalContent]);
 
   async function save(key, data, sectionId) {
@@ -1138,9 +1134,8 @@ function ContentTab() {
           <button
             type="button"
             onClick={() => setHpField("banner.enabled", !hp.banner?.enabled)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors ${
-              hp.banner?.enabled ? "bg-eco-100 text-moss" : "bg-cream border border-eco-100 text-bark/50"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors ${hp.banner?.enabled ? "bg-eco-100 text-moss" : "bg-cream border border-eco-100 text-bark/50"
+              }`}
           >
             {hp.banner?.enabled ? (
               <><ToggleRight className="w-4 h-4" /> Banner is ON</>
@@ -1163,11 +1158,10 @@ function ContentTab() {
                 key={t}
                 type="button"
                 onClick={() => setHpField("banner.type", t)}
-                className={`px-4 py-1.5 rounded-xl font-mono text-xs capitalize transition-colors ${
-                  hp.banner?.type === t
-                    ? "bg-moss text-cream"
-                    : "bg-eco-50 text-bark/60 hover:bg-eco-100"
-                }`}
+                className={`px-4 py-1.5 rounded-xl font-mono text-xs capitalize transition-colors ${hp.banner?.type === t
+                  ? "bg-moss text-cream"
+                  : "bg-eco-50 text-bark/60 hover:bg-eco-100"
+                  }`}
               >
                 {t}
               </button>
@@ -1590,10 +1584,10 @@ export default function AdminPage() {
   const totalPoints = users.reduce((sum, u) => sum + (u.points || 0), 0);
   const pendingSubs = submissions.filter((s) => s.status === "pending");
   const tabs = [
-    { id: "overview",    label: "Overview",    icon: TrendingUp },
+    { id: "overview", label: "Overview", icon: TrendingUp },
     { id: "submissions", label: "Submissions", icon: Recycle },
-    { id: "users",       label: "Users",       icon: Users },
-    { id: "rewards",     label: "Rewards",     icon: Gift },
+    { id: "users", label: "Users", icon: Users },
+    { id: "rewards", label: "Rewards", icon: Gift },
     ...(profile?.role === "superadmin"
       ? [{ id: "content", label: "Content", icon: FileText }]
       : []),
@@ -1647,11 +1641,10 @@ export default function AdminPage() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-display font-semibold text-sm transition-all duration-200 ${
-                tab === id
-                  ? "bg-moss text-cream shadow-sm"
-                  : "bg-white border border-eco-100 text-bark/65 hover:border-moss/40"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-display font-semibold text-sm transition-all duration-200 ${tab === id
+                ? "bg-moss text-cream shadow-sm"
+                : "bg-white border border-eco-100 text-bark/65 hover:border-moss/40"
+                }`}
             >
               <Icon className="w-4 h-4" strokeWidth={1.5} />
               {label}
@@ -1770,6 +1763,9 @@ export default function AdminPage() {
                                   </span>
                                 ))}
                               </div>
+                              <p className="font-mono text-xs text-bark/40 truncate">
+                                Bag Number:{sub.bagNumber}
+                              </p>
                               <p className="font-mono text-xs text-bark/40 truncate">
                                 {sub.userId} ·{" "}
                                 {new Date(sub.submittedAt).toLocaleDateString(
@@ -1892,11 +1888,10 @@ export default function AdminPage() {
                                 title={
                                   isAdmin ? "Remove admin role" : "Make admin"
                                 }
-                                className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  isAdmin
-                                    ? "bg-red-50 text-red-500 hover:bg-red-100"
-                                    : "bg-eco-50 text-moss hover:bg-eco-100"
-                                }`}
+                                className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isAdmin
+                                  ? "bg-red-50 text-red-500 hover:bg-red-100"
+                                  : "bg-eco-50 text-moss hover:bg-eco-100"
+                                  }`}
                               >
                                 {roleActionId === u._id ? (
                                   <svg
@@ -1994,7 +1989,7 @@ export default function AdminPage() {
                           : (codeCounts[r._id] ?? "…");
                         const stockEmpty = isMultiUse
                           ? (r.multiUseCurrentCount || 0) >=
-                            (r.multiUseMaxCount || 0)
+                          (r.multiUseMaxCount || 0)
                           : codeCounts[r._id] === 0;
                         const isExpanded = expandedReward === r._id;
                         return (
@@ -2086,11 +2081,10 @@ export default function AdminPage() {
                                   )}
                                   <button
                                     onClick={() => handleToggleReward(r)}
-                                    className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-xl transition-all duration-200 ${
-                                      r.available
-                                        ? "bg-eco-100 text-eco-700 hover:bg-red-50 hover:text-red-600"
-                                        : "bg-yellow-50 text-yellow-700 hover:bg-eco-100 hover:text-eco-700"
-                                    }`}
+                                    className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-xl transition-all duration-200 ${r.available
+                                      ? "bg-eco-100 text-eco-700 hover:bg-red-50 hover:text-red-600"
+                                      : "bg-yellow-50 text-yellow-700 hover:bg-eco-100 hover:text-eco-700"
+                                      }`}
                                   >
                                     {r.available ? (
                                       <>

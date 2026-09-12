@@ -33,11 +33,11 @@ import { useAuth } from "../lib/useAuth";
 const BINS = [{ id: "bin-1", label: "Administrative Block" }];
 
 // ── BAG CODE DISPLAY ──────────────────────────────────────
-function BagCodeCard({ bagCode, onDone }) {
+function BagCodeCard({ bagDetails, onDone }) {
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   function handleCopy() {
-    navigator.clipboard.writeText(bagCode).then(() => {
+    navigator.clipboard.writeText(`Bag Code: ${bagDetails.code}\nBag Number: ${bagDetails.number}`).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -52,9 +52,9 @@ function BagCodeCard({ bagCode, onDone }) {
           Deposit Logged!
         </h2>
         <p className="font-body text-bark/55 text-sm mb-6 leading-relaxed">
-          Write this code on your bag{" "}
+          Write these details on your bag{" "}
           <span className="font-semibold text-moss">before dropping it</span> at
-          the collection bin. The admin will verify this code before approving
+          the collection bin. The admin will verify this before approving
           your deposit.
         </p>
         <div className="bg-eco-50 border-2 border-eco-200 rounded-2xl p-5 mb-2">
@@ -62,11 +62,18 @@ function BagCodeCard({ bagCode, onDone }) {
             Your Bag Code
           </p>
           <p className="font-mono font-bold text-xl text-moss tracking-widest break-all">
-            {bagCode}
+            {bagDetails.code}
+          </p>
+          <div className="h-px bg-eco-200 my-4" />
+          <p className="font-mono text-xs text-bark/40 mb-2 tracking-widest uppercase">
+            Your Bag Number
+          </p>
+          <p className="font-mono font-bold text-xl text-moss tracking-widest break-all">
+            {bagDetails.number}
           </p>
         </div>
         <p className="font-body text-xs text-red-500 mb-5">
-          ⚠ This code will not be shown again. Note it down or copy it now.
+          ⚠ These will not be shown again. Note them down or copy them now.
         </p>
         <button
           onClick={handleCopy}
@@ -80,7 +87,7 @@ function BagCodeCard({ bagCode, onDone }) {
           ) : (
             <>
               <ClipboardCopy className="w-4 h-4" />
-              Copy Code
+              Copy Details
             </>
           )}
         </button>
@@ -92,7 +99,7 @@ function BagCodeCard({ bagCode, onDone }) {
             className="w-4 h-4 accent-moss rounded"
           />
           <span className="font-body text-xs text-bark/60">
-            I have written / noted down the code on my bag
+            I have written / noted down the details on my bag
           </span>
         </label>
         <button
@@ -176,7 +183,7 @@ function SubmitModal({ onClose, onSuccess, userId, groupId }) {
         binId,
         groupId: groupId || null,
       });
-      onSuccess(submission.bagCode);
+      onSuccess({ code: submission.bagCode, number: submission.bagNumber });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -343,7 +350,7 @@ export default function DashboardPage() {
   const [redemptions, setRedemptions] = useState([]);
   const [codeCounts, setCodeCounts] = useState({});
   const [showModal, setShowModal] = useState(false);
-  const [bagCode, setBagCode] = useState(null);
+  const [bagDetails, setBagDetails] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
   const [redeemError, setRedeemError] = useState("");
   const [redeemingId, setRedeemingId] = useState(null);
@@ -409,9 +416,9 @@ export default function DashboardPage() {
     }
   }
 
-  function handleSubmitSuccess(code) {
+  function handleSubmitSuccess(details) {
     setShowModal(false);
-    setBagCode(code);
+    setBagDetails(details);
     refreshProfile();
     loadAll();
   }
@@ -429,8 +436,8 @@ export default function DashboardPage() {
           onSuccess={handleSubmitSuccess}
         />
       )}
-      {bagCode && (
-        <BagCodeCard bagCode={bagCode} onDone={() => setBagCode(null)} />
+      {bagDetails && (
+        <BagCodeCard bagDetails={bagDetails} onDone={() => setBagDetails(null)} />
       )}
       <div className="max-w-5xl mx-auto">
         {/* Header */}
