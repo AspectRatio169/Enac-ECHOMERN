@@ -248,7 +248,7 @@ function VerifyDialog({ submission, onApprove, onReject, onClose, isOwn }) {
               type="text"
               value={inputCode}
               onChange={(e) => setInputCode(e.target.value)}
-              placeholder="ECHO-XXXX-XXXX-XXXX-XXXX"
+              placeholder="e.g. A1B2C3"
               className={`w-full px-4 py-3 border-2 rounded-2xl font-mono text-sm focus:outline-none transition-colors mb-2 ${inputCode === ""
                 ? "border-eco-100 bg-cream/50"
                 : codeMatches
