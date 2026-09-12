@@ -1788,15 +1788,13 @@ export default function AdminPage() {
                               >
                                 {sub.status}
                               </span>
-                              {isPending && (
-                                <button
-                                  onClick={() => setVerifyingSub(sub)}
-                                  className="flex items-center gap-1.5 bg-moss text-cream font-display font-semibold text-xs px-3 py-1.5 rounded-xl hover:bg-leaf transition-colors"
-                                >
-                                  <KeyRound className="w-3 h-3" />
-                                  Verify
-                                </button>
-                              )}
+                              <button
+                                onClick={() => setVerifyingSub(sub)}
+                                className="flex items-center gap-1.5 bg-moss text-cream font-display font-semibold text-xs px-3 py-1.5 rounded-xl hover:bg-leaf transition-colors"
+                              >
+                                <KeyRound className="w-3 h-3" />
+                                {isPending ? "Verify" : "Edit Status"}
+                              </button>
                               <button
                                 onClick={() => handleDeleteSubmission(sub)}
                                 className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors group"
@@ -1805,11 +1803,11 @@ export default function AdminPage() {
                               </button>
                             </div>
                           </div>
-                          {isOwn && isPending && (
+                          {isOwn && (
                             <div className="mt-2 flex items-center gap-1.5 bg-yellow-50 border border-yellow-100 text-yellow-700 rounded-xl px-3 py-1 w-fit">
                               <AlertTriangle className="w-3 h-3 shrink-0" />
                               <span className="font-mono text-xs">
-                                Your submission — cannot verify
+                                Your submission — cannot modify
                               </span>
                             </div>
                           )}
