@@ -1,7 +1,58 @@
 import { Link } from 'react-router-dom';
 import { Leaf, MapPin, Mail, ExternalLink } from 'lucide-react';
+import { useSiteContent } from '../lib/SiteContentContext';
+
+function SponsorStrip({ sponsorships }) {
+  if (!sponsorships?.length) return null;
+  return (
+    <div className="border-t border-cream/10 py-6">
+      <p className="font-mono text-xs text-cream/35 tracking-widest uppercase text-center mb-5">
+        Our Sponsors &amp; Partners
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-6">
+        {sponsorships.map((s, i) => {
+          const inner = (
+            <div
+              className="h-10 max-w-[120px] flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity duration-300"
+              title={s.name}
+            >
+              {s.logoUrl ? (
+                <img
+                  src={s.logoUrl}
+                  alt={s.name}
+                  className="max-h-10 max-w-[120px] object-contain filter brightness-0 invert"
+                />
+              ) : (
+                <span className="font-display font-semibold text-sm text-cream/70">
+                  {s.name}
+                </span>
+              )}
+            </div>
+          );
+
+          return s.linkUrl ? (
+            <a
+              key={i}
+              href={s.linkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={s.name}
+            >
+              {inner}
+            </a>
+          ) : (
+            <div key={i}>{inner}</div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function Footer() {
+  const { global: globalContent } = useSiteContent();
+  const sponsorships = globalContent?.sponsorships ?? [];
+
   return (
     <footer className="bg-moss text-cream relative overflow-hidden">
       {/* Decorative background */}
@@ -86,7 +137,10 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Divider */}
+        {/* Sponsors strip — only renders when sponsorships array is non-empty */}
+        <SponsorStrip sponsorships={sponsorships} />
+
+        {/* Divider + copyright */}
         <div className="border-t border-cream/10 pt-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="font-mono text-xs text-cream/40 tracking-wide">

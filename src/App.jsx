@@ -8,6 +8,7 @@ import {
 import { useEffect } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./lib/AuthContext";
+import { SiteContentProvider } from "./lib/SiteContentContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <AuthProvider>
+      <SiteContentProvider>
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
@@ -113,6 +115,7 @@ export default function App() {
           <Route path="/unverified" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
+      </SiteContentProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

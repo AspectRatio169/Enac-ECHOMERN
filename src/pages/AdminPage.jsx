@@ -21,8 +21,13 @@ import {
   ShieldOff,
   Upload,
   Image,
+  FileText,
+  ToggleLeft,
+  ToggleRight,
+  GripVertical,
 } from "lucide-react";
 import { useAuth } from "../lib/useAuth";
+import { useSiteContent } from "../lib/SiteContentContext";
 import {
   getAllUsers,
   getAllSubmissions,
@@ -38,6 +43,8 @@ import {
   updateSubmissionStatus,
   promoteToAdmin,
   demoteToUser,
+  updateCmsContent,
+  seedCmsContent,
 } from "../lib/db";
 
 const statusStyle = {
@@ -900,8 +907,547 @@ function AddRewardForm({ onCreated, onCancel }) {
   );
 }
 
+// ── CMS CONTENT TAB ───────────────────────────────────────────────────────────
+function SectionCard({ title, children, onSave, saving, saved }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-white rounded-3xl border border-eco-100 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-7 py-5 hover:bg-eco-50/50 transition-colors"
+      >
+        <span className="font-display font-semibold text-sm text-moss">{title}</span>
+        {open ? (
+          <ChevronUp className="w-4 h-4 text-bark/40" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-bark/40" />
+        )}
+      </button>
+      {open && (
+        <div className="px-7 pb-7 space-y-4 border-t border-eco-50">
+          <div className="pt-5 space-y-4">{children}</div>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="btn-primary text-sm disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+            {saved && (
+              <span className="font-body text-xs text-eco-600 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Saved
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, hint, children }) {
+  return (
+    <div>
+      <label className="font-display font-medium text-xs text-bark/60 mb-1 block">
+        {label}{hint && <span className="font-body font-normal text-bark/35 ml-1">({hint})</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full px-3 py-2.5 border-2 border-eco-100 rounded-xl font-body text-sm text-bark focus:outline-none focus:border-moss transition-colors bg-cream/50";
+const textareaCls = inputCls + " resize-y min-h-[80px]";
+
+// Reusable sponsor logo upload (same logic as LogoUpload but simplified)
+function SponsorLogoUpload({ value, onChange }) {
+  const ref = useRef(null);
+  function processFile(file) {
+    if (!file || !file.type.startsWith("image/")) return;
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 200;
+      const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      onChange(canvas.toDataURL("image/webp", 0.85));
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-xl border-2 border-eco-100 bg-cream flex items-center justify-center shrink-0 overflow-hidden">
+        {value ? (
+          <img src={value} alt="sponsor" className="w-full h-full object-contain" />
+        ) : (
+          <Image className="w-5 h-5 text-bark/20" strokeWidth={1.5} />
+        )}
+      </div>
+      <div className="flex-1 flex gap-2">
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-xl bg-eco-50 text-moss hover:bg-eco-100 transition-colors"
+        >
+          <Upload className="w-3 h-3" />
+          {value ? "Replace" : "Upload logo"}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="font-mono text-xs px-3 py-1.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => processFile(e.target.files?.[0])} />
+    </div>
+  );
+}
+
+function ContentTab() {
+  const { homepage, aboutpage, global: globalContent, refreshKey } = useSiteContent();
+
+  // ── Local draft state ───────────────────────────────────────────────────────
+  const [hp,  setHp]  = useState(() => JSON.parse(JSON.stringify(homepage)));
+  const [ab,  setAb]  = useState(() => JSON.parse(JSON.stringify(aboutpage)));
+  const [gl,  setGl]  = useState(() => JSON.parse(JSON.stringify(globalContent)));
+
+  // Saving/saved states per section key
+  const [saving, setSaving] = useState({});
+  const [saved,  setSaved]  = useState({});
+  const [cmsErr, setCmsErr] = useState("");
+
+  // Keep local draft in sync when context refreshes (e.g. after seed)
+  useEffect(() => { setHp(JSON.parse(JSON.stringify(homepage))); },  [homepage]);
+  useEffect(() => { setAb(JSON.parse(JSON.stringify(aboutpage))); },  [aboutpage]);
+  useEffect(() => { setGl(JSON.parse(JSON.stringify(globalContent))); }, [globalContent]);
+
+  async function save(key, data, sectionId) {
+    setSaving((s) => ({ ...s, [sectionId]: true }));
+    setCmsErr("");
+    try {
+      await updateCmsContent(key, data);
+      refreshKey(key, data);
+      setSaved((s) => ({ ...s, [sectionId]: true }));
+      setTimeout(() => setSaved((s) => ({ ...s, [sectionId]: false })), 2500);
+    } catch (e) {
+      setCmsErr(e.message);
+    } finally {
+      setSaving((s) => ({ ...s, [sectionId]: false }));
+    }
+  }
+
+  async function handleSeed() {
+    if (!confirm("This will pre-populate any missing CMS documents with defaults. Continue?")) return;
+    setSaving((s) => ({ ...s, seed: true }));
+    setCmsErr("");
+    try {
+      await seedCmsContent();
+      setSaved((s) => ({ ...s, seed: true }));
+      setTimeout(() => setSaved((s) => ({ ...s, seed: false })), 2500);
+    } catch (e) {
+      setCmsErr(e.message);
+    } finally {
+      setSaving((s) => ({ ...s, seed: false }));
+    }
+  }
+
+  // Helpers for nested updates
+  const setHpField = (path, val) => setHp((prev) => setNestedField({ ...prev }, path, val));
+  const setAbField = (path, val) => setAb((prev) => setNestedField({ ...prev }, path, val));
+  const setGlField = (path, val) => setGl((prev) => setNestedField({ ...prev }, path, val));
+
+  function setNestedField(obj, path, val) {
+    const keys = path.split(".");
+    let cur = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+      cur[keys[i]] = { ...cur[keys[i]] };
+      cur = cur[keys[i]];
+    }
+    cur[keys[keys.length - 1]] = val;
+    return obj;
+  }
+
+  // Sponsor CRUD helpers
+  function addSponsor() {
+    setGl((g) => ({ ...g, sponsorships: [...(g.sponsorships ?? []), { name: "", logoUrl: "", linkUrl: "" }] }));
+  }
+  function removeSponsor(i) {
+    setGl((g) => {
+      const s = [...g.sponsorships];
+      s.splice(i, 1);
+      return { ...g, sponsorships: s };
+    });
+  }
+  function moveSponsor(i, dir) {
+    setGl((g) => {
+      const s = [...g.sponsorships];
+      const j = i + dir;
+      if (j < 0 || j >= s.length) return g;
+      [s[i], s[j]] = [s[j], s[i]];
+      return { ...g, sponsorships: s };
+    });
+  }
+  function setSponsorField(i, field, val) {
+    setGl((g) => {
+      const s = [...g.sponsorships];
+      s[i] = { ...s[i], [field]: val };
+      return { ...g, sponsorships: s };
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-display font-semibold text-moss">Site Content</h2>
+        <div className="flex items-center gap-3">
+          {cmsErr && (
+            <span className="font-body text-xs text-red-500">{cmsErr}</span>
+          )}
+          <button
+            type="button"
+            onClick={handleSeed}
+            disabled={saving.seed}
+            className="flex items-center gap-2 font-mono text-xs px-4 py-2 rounded-xl bg-eco-50 text-moss hover:bg-eco-100 transition-colors disabled:opacity-60"
+          >
+            {saving.seed ? "Seeding…" : "Seed Defaults"}
+            {saved.seed && <Check className="w-3 h-3" />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Banner ── */}
+      <SectionCard
+        title="Announcement Banner"
+        onSave={() => save("homepage", hp, "banner")}
+        saving={saving.banner}
+        saved={saved.banner}
+      >
+        <Field label="Enabled">
+          <button
+            type="button"
+            onClick={() => setHpField("banner.enabled", !hp.banner?.enabled)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-body text-sm font-medium transition-colors ${
+              hp.banner?.enabled ? "bg-eco-100 text-moss" : "bg-cream border border-eco-100 text-bark/50"
+            }`}
+          >
+            {hp.banner?.enabled ? (
+              <><ToggleRight className="w-4 h-4" /> Banner is ON</>
+            ) : (
+              <><ToggleLeft className="w-4 h-4" /> Banner is OFF</>
+            )}
+          </button>
+        </Field>
+        <Field label="Message">
+          <textarea
+            className={textareaCls}
+            value={hp.banner?.message ?? ""}
+            onChange={(e) => setHpField("banner.message", e.target.value)}
+          />
+        </Field>
+        <Field label="Type" hint="controls colour">
+          <div className="flex gap-2">
+            {["info", "success", "warning"].map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setHpField("banner.type", t)}
+                className={`px-4 py-1.5 rounded-xl font-mono text-xs capitalize transition-colors ${
+                  hp.banner?.type === t
+                    ? "bg-moss text-cream"
+                    : "bg-eco-50 text-bark/60 hover:bg-eco-100"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </Field>
+      </SectionCard>
+
+      {/* ── Hero ── */}
+      <SectionCard
+        title="Hero Section"
+        onSave={() => save("homepage", hp, "hero")}
+        saving={saving.hero}
+        saved={saved.hero}
+      >
+        <Field label="Tag line" hint="small badge above headline">
+          <input className={inputCls} value={hp.hero?.tagline ?? ""} onChange={(e) => setHpField("hero.tagline", e.target.value)} />
+        </Field>
+        <Field label="Headline">
+          <input className={inputCls} value={hp.hero?.headline ?? ""} onChange={(e) => setHpField("hero.headline", e.target.value)} />
+        </Field>
+        <Field label="Subtitle">
+          <input className={inputCls} value={hp.hero?.subtitle ?? ""} onChange={(e) => setHpField("hero.subtitle", e.target.value)} />
+        </Field>
+        <Field label="Body copy">
+          <textarea className={textareaCls} value={hp.hero?.body ?? ""} onChange={(e) => setHpField("hero.body", e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Primary CTA">
+            <input className={inputCls} value={hp.hero?.ctaPrimary ?? ""} onChange={(e) => setHpField("hero.ctaPrimary", e.target.value)} />
+          </Field>
+          <Field label="Map CTA">
+            <input className={inputCls} value={hp.hero?.ctaMap ?? ""} onChange={(e) => setHpField("hero.ctaMap", e.target.value)} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── How It Works ── */}
+      <SectionCard
+        title="How It Works"
+        onSave={() => save("homepage", hp, "howItWorks")}
+        saving={saving.howItWorks}
+        saved={saved.howItWorks}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Section tag">
+            <input className={inputCls} value={hp.howItWorks?.sectionTag ?? ""} onChange={(e) => setHpField("howItWorks.sectionTag", e.target.value)} />
+          </Field>
+          <Field label="Heading">
+            <input className={inputCls} value={hp.howItWorks?.heading ?? ""} onChange={(e) => setHpField("howItWorks.heading", e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Subheading">
+          <input className={inputCls} value={hp.howItWorks?.subheading ?? ""} onChange={(e) => setHpField("howItWorks.subheading", e.target.value)} />
+        </Field>
+        {(hp.howItWorks?.steps ?? []).map((step, i) => (
+          <div key={i} className="bg-eco-50 rounded-2xl p-4 space-y-3">
+            <p className="font-mono text-xs text-bark/40">Step {i + 1}</p>
+            <Field label="Title">
+              <input
+                className={inputCls}
+                value={step.title}
+                onChange={(e) => {
+                  const steps = [...hp.howItWorks.steps];
+                  steps[i] = { ...steps[i], title: e.target.value };
+                  setHpField("howItWorks.steps", steps);
+                }}
+              />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className={textareaCls}
+                value={step.description}
+                onChange={(e) => {
+                  const steps = [...hp.howItWorks.steps];
+                  steps[i] = { ...steps[i], description: e.target.value };
+                  setHpField("howItWorks.steps", steps);
+                }}
+              />
+            </Field>
+          </div>
+        ))}
+      </SectionCard>
+
+      {/* ── Bin Location ── */}
+      <SectionCard
+        title="Bin Location"
+        onSave={() => save("homepage", hp, "binLocation")}
+        saving={saving.binLocation}
+        saved={saved.binLocation}
+      >
+        <Field label="Location name">
+          <input className={inputCls} value={hp.binLocation?.name ?? ""} onChange={(e) => setHpField("binLocation.name", e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Latitude">
+            <input type="number" step="any" className={inputCls} value={hp.binLocation?.lat ?? ""} onChange={(e) => setHpField("binLocation.lat", parseFloat(e.target.value))} />
+          </Field>
+          <Field label="Longitude">
+            <input type="number" step="any" className={inputCls} value={hp.binLocation?.lng ?? ""} onChange={(e) => setHpField("binLocation.lng", parseFloat(e.target.value))} />
+          </Field>
+        </div>
+        <Field label="Description" hint="shown under map pin">
+          <textarea className={textareaCls} value={hp.binLocation?.description ?? ""} onChange={(e) => setHpField("binLocation.description", e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Map heading">
+            <input className={inputCls} value={hp.binLocation?.mapHeading ?? ""} onChange={(e) => setHpField("binLocation.mapHeading", e.target.value)} />
+          </Field>
+          <Field label="Map subtext">
+            <input className={inputCls} value={hp.binLocation?.mapSubtext ?? ""} onChange={(e) => setHpField("binLocation.mapSubtext", e.target.value)} />
+          </Field>
+        </div>
+      </SectionCard>
+
+      {/* ── Join the Movement ── */}
+      <SectionCard
+        title="Join the Movement Section"
+        onSave={() => save("homepage", hp, "joinMovement")}
+        saving={saving.joinMovement}
+        saved={saved.joinMovement}
+      >
+        <Field label="Heading">
+          <input className={inputCls} value={hp.joinMovement?.heading ?? ""} onChange={(e) => setHpField("joinMovement.heading", e.target.value)} />
+        </Field>
+        <Field label="Subheading">
+          <input className={inputCls} value={hp.joinMovement?.subheading ?? ""} onChange={(e) => setHpField("joinMovement.subheading", e.target.value)} />
+        </Field>
+        <Field label="CTA button label">
+          <input className={inputCls} value={hp.joinMovement?.ctaLabel ?? ""} onChange={(e) => setHpField("joinMovement.ctaLabel", e.target.value)} />
+        </Field>
+        {(hp.joinMovement?.cards ?? []).map((card, i) => (
+          <div key={i} className="bg-eco-50 rounded-2xl p-4 space-y-3">
+            <p className="font-mono text-xs text-bark/40">Card {i + 1}</p>
+            <Field label="Title">
+              <input
+                className={inputCls}
+                value={card.title}
+                onChange={(e) => {
+                  const cards = [...hp.joinMovement.cards];
+                  cards[i] = { ...cards[i], title: e.target.value };
+                  setHpField("joinMovement.cards", cards);
+                }}
+              />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className={textareaCls}
+                value={card.description}
+                onChange={(e) => {
+                  const cards = [...hp.joinMovement.cards];
+                  cards[i] = { ...cards[i], description: e.target.value };
+                  setHpField("joinMovement.cards", cards);
+                }}
+              />
+            </Field>
+          </div>
+        ))}
+      </SectionCard>
+
+      {/* ── About Page ── */}
+      <SectionCard
+        title="About Page"
+        onSave={() => save("aboutpage", ab, "aboutpage")}
+        saving={saving.aboutpage}
+        saved={saved.aboutpage}
+      >
+        <Field label="Hero tag">
+          <input className={inputCls} value={ab.hero?.tag ?? ""} onChange={(e) => setAbField("hero.tag", e.target.value)} />
+        </Field>
+        <Field label="Hero heading" hint="use \\n for line break">
+          <input className={inputCls} value={ab.hero?.heading ?? ""} onChange={(e) => setAbField("hero.heading", e.target.value)} />
+        </Field>
+        <Field label="Hero subtext">
+          <textarea className={textareaCls} value={ab.hero?.subtext ?? ""} onChange={(e) => setAbField("hero.subtext", e.target.value)} />
+        </Field>
+        <p className="font-mono text-xs text-bark/40 pt-2">Mission / Values / Impact Cards</p>
+        {(ab.missionCards ?? []).map((card, i) => (
+          <div key={i} className="bg-eco-50 rounded-2xl p-4 space-y-3">
+            <Field label="Title">
+              <input
+                className={inputCls}
+                value={card.title}
+                onChange={(e) => {
+                  const cards = [...ab.missionCards];
+                  cards[i] = { ...cards[i], title: e.target.value };
+                  setAbField("missionCards", cards);
+                }}
+              />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className={textareaCls}
+                value={card.desc}
+                onChange={(e) => {
+                  const cards = [...ab.missionCards];
+                  cards[i] = { ...cards[i], desc: e.target.value };
+                  setAbField("missionCards", cards);
+                }}
+              />
+            </Field>
+          </div>
+        ))}
+        <Field label="What We Collect items" hint="one per line">
+          <textarea
+            className={textareaCls + " min-h-[140px]"}
+            value={(ab.collectItems ?? []).join("\n")}
+            onChange={(e) =>
+              setAbField(
+                "collectItems",
+                e.target.value.split("\n").map((s) => s.trim()).filter(Boolean)
+              )
+            }
+          />
+        </Field>
+        <Field label="Team section heading">
+          <input className={inputCls} value={ab.teamBlurb?.heading ?? ""} onChange={(e) => setAbField("teamBlurb.heading", e.target.value)} />
+        </Field>
+        <Field label="Team section body">
+          <textarea className={textareaCls} value={ab.teamBlurb?.body ?? ""} onChange={(e) => setAbField("teamBlurb.body", e.target.value)} />
+        </Field>
+      </SectionCard>
+
+      {/* ── Sponsorships ── */}
+      <SectionCard
+        title="Footer Sponsorships"
+        onSave={() => save("global", gl, "sponsorships")}
+        saving={saving.sponsorships}
+        saved={saved.sponsorships}
+      >
+        <p className="font-body text-xs text-bark/50">
+          Logos are shown in the footer above the copyright line. They appear as white silhouettes on the dark green background.
+        </p>
+        <div className="space-y-4">
+          {(gl.sponsorships ?? []).length === 0 && (
+            <p className="font-body text-xs text-bark/35 italic">No sponsors added yet.</p>
+          )}
+          {(gl.sponsorships ?? []).map((s, i) => (
+            <div key={i} className="bg-eco-50 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-xs text-bark/40">Sponsor {i + 1}</p>
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => moveSponsor(i, -1)} disabled={i === 0} className="p-1 rounded-lg hover:bg-eco-100 disabled:opacity-30 transition-colors">
+                    <ChevronUp className="w-3 h-3 text-bark/50" />
+                  </button>
+                  <button type="button" onClick={() => moveSponsor(i, 1)} disabled={i === (gl.sponsorships.length - 1)} className="p-1 rounded-lg hover:bg-eco-100 disabled:opacity-30 transition-colors">
+                    <ChevronDown className="w-3 h-3 text-bark/50" />
+                  </button>
+                  <button type="button" onClick={() => removeSponsor(i)} className="p-1 rounded-lg hover:bg-red-50 transition-colors">
+                    <Trash2 className="w-3 h-3 text-red-400" />
+                  </button>
+                </div>
+              </div>
+              <Field label="Name">
+                <input className={inputCls} value={s.name} onChange={(e) => setSponsorField(i, "name", e.target.value)} placeholder="e.g. Enactus India" />
+              </Field>
+              <Field label="Logo">
+                <SponsorLogoUpload value={s.logoUrl} onChange={(v) => setSponsorField(i, "logoUrl", v)} />
+              </Field>
+              <Field label="Link URL" hint="optional">
+                <input className={inputCls} value={s.linkUrl} onChange={(e) => setSponsorField(i, "linkUrl", e.target.value)} placeholder="https://..." />
+              </Field>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addSponsor}
+            className="flex items-center gap-2 font-mono text-xs px-4 py-2.5 rounded-xl bg-eco-50 text-moss hover:bg-eco-100 transition-colors w-full justify-center border-2 border-dashed border-eco-200"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Sponsor
+          </button>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
 // ── ADMIN PAGE ────────────────────────────────────────────
 export default function AdminPage() {
+
   const { user, profile } = useAuth();
   const [tab, setTab] = useState("overview");
   const [users, setUsers] = useState([]);
@@ -1044,10 +1590,13 @@ export default function AdminPage() {
   const totalPoints = users.reduce((sum, u) => sum + (u.points || 0), 0);
   const pendingSubs = submissions.filter((s) => s.status === "pending");
   const tabs = [
-    { id: "overview", label: "Overview", icon: TrendingUp },
+    { id: "overview",    label: "Overview",    icon: TrendingUp },
     { id: "submissions", label: "Submissions", icon: Recycle },
-    { id: "users", label: "Users", icon: Users },
-    { id: "rewards", label: "Rewards", icon: Gift },
+    { id: "users",       label: "Users",       icon: Users },
+    { id: "rewards",     label: "Rewards",     icon: Gift },
+    ...(profile?.role === "superadmin"
+      ? [{ id: "content", label: "Content", icon: FileText }]
+      : []),
   ];
 
   return (
@@ -1577,6 +2126,10 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
+            )}
+            {/* CONTENT (superadmin only) */}
+            {tab === "content" && profile?.role === "superadmin" && (
+              <ContentTab />
             )}
           </>
         )}

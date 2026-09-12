@@ -1,6 +1,13 @@
-import { Leaf, Target, Heart, Globe, Users, Recycle } from 'lucide-react';
+import { Target, Heart, Globe, Users, Recycle, Leaf } from 'lucide-react';
+import { useSiteContent } from '../lib/SiteContentContext';
+
+// Map icon name strings (stored in CMS) to actual Lucide components
+const ICON_MAP = { Target, Heart, Globe, Users, Recycle, Leaf };
 
 export default function AboutPage() {
+  const { aboutpage } = useSiteContent();
+  const { hero, missionCards, collectItems, teamBlurb } = aboutpage;
+
   return (
     <main className="pt-24 pb-16 px-6 bg-cream min-h-screen">
       <div className="max-w-4xl mx-auto">
@@ -9,47 +16,32 @@ export default function AboutPage() {
         <div className="text-center mb-16">
           <span className="section-tag mb-4 inline-flex">
             <Leaf className="w-3 h-3" />
-            About Project ECHO
+            {hero.tag}
           </span>
           <h1 className="font-display font-bold text-4xl sm:text-5xl text-moss mt-4 mb-4 leading-tight">
-             E-Waste Collection <br />Hub Operation
+            {hero.heading.split('\n').map((line, i) => (
+              <span key={i}>{line}{i < hero.heading.split('\n').length - 1 && <br />}</span>
+            ))}
           </h1>
           <p className="font-body text-bark/60 text-lg max-w-2xl mx-auto leading-relaxed">
-            A student-driven initiative by Enactus NSUT to tackle e-waste on campus
-            through gamification, community engagement, and sustainable habits.
+            {hero.subtext}
           </p>
         </div>
 
         {/* Mission / Values / Impact */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {[
-            {
-              icon: Target,
-              title: 'Our Mission',
-              desc: 'To make e-waste disposal accessible, rewarding, and habitual for every student at NSUT.',
-              color: 'bg-moss',
-            },
-            {
-              icon: Heart,
-              title: 'Our Values',
-              desc: 'Sustainability, community responsibility, innovation, and building a greener campus culture together.',
-              color: 'bg-leaf',
-            },
-            {
-              icon: Globe,
-              title: 'Our Impact',
-              desc: 'From campus to community — setting a model for sustainable e-waste management in educational institutions.',
-              color: 'bg-eco-500',
-            },
-          ].map(({ icon: Icon, title, desc, color }) => (
-            <div key={title} className="step-card">
-              <div className={`w-12 h-12 ${color} rounded-2xl flex items-center justify-center mb-5`}>
-                <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+          {(missionCards ?? []).map(({ icon, title, desc, color }) => {
+            const Icon = ICON_MAP[icon] ?? Target;
+            return (
+              <div key={title} className="step-card">
+                <div className={`w-12 h-12 ${color} rounded-2xl flex items-center justify-center mb-5`}>
+                  <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+                </div>
+                <h3 className="font-display font-semibold text-lg text-moss mb-2">{title}</h3>
+                <p className="font-body text-bark/60 text-sm leading-relaxed">{desc}</p>
               </div>
-              <h3 className="font-display font-semibold text-lg text-moss mb-2">{title}</h3>
-              <p className="font-body text-bark/60 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* What We Collect */}
@@ -61,11 +53,7 @@ export default function AboutPage() {
             <h2 className="font-display font-bold text-2xl text-moss">What We Collect</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {[
-              'Mobile Phones', 'Laptops & Tablets', 'Chargers & Cables',
-              'Batteries', 'Earphones & Headsets', 'Circuit Boards',
-              'USB Drives', 'Old Keyboards & Mice', 'Small Appliances',
-            ].map((item) => (
+            {(collectItems ?? []).map((item) => (
               <div
                 key={item}
                 className="flex items-center gap-2 bg-eco-50 border border-eco-100 rounded-xl px-4 py-3"
@@ -82,11 +70,9 @@ export default function AboutPage() {
           <div className="w-12 h-12 bg-cream/15 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-cream/20">
             <Users className="w-6 h-6 text-eco-300" strokeWidth={1.5} />
           </div>
-          <h2 className="font-display font-bold text-2xl mb-3">Backed by Enactus NSUT</h2>
+          <h2 className="font-display font-bold text-2xl mb-3">{teamBlurb.heading}</h2>
           <p className="font-body text-cream/70 text-base max-w-xl mx-auto leading-relaxed">
-            Enactus is an international nonprofit that brings together student, academic,
-            and business leaders committed to using the power of entrepreneurial action
-            to transform lives and shape a better, more sustainable world.
+            {teamBlurb.body}
           </p>
         </div>
 

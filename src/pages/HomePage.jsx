@@ -12,8 +12,11 @@ import {
   Building2,
 } from "lucide-react";
 import { useAuth } from "../lib/useAuth";
+import { useSiteContent } from "../lib/SiteContentContext";
+// ── Step card ─────────────────────────────────────────────────────────────────
+const STEP_COLORS = ["bg-moss", "bg-leaf", "bg-eco-500"];
+const STEP_ICONS = [MapPin, Coins, Gift];
 
-// Step card
 function StepCard({ number, icon: Icon, title, description, color }) {
   return (
     <div className="step-card group">
@@ -37,19 +40,18 @@ function StepCard({ number, icon: Icon, title, description, color }) {
   );
 }
 
-// Single bin location — update lat/lng as needed
-const BIN_LOCATION = {
-  name: "Administrative Block",
-  lat: 28.60982608028556,
-  lng: 77.03703709922338,
-  description: "Inside Administrative Block, ground floor lobby",
-};
-
-function BinMap() {
+// ── Bin Map ───────────────────────────────────────────────────────────────────
+function BinMap({ binLocation }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
   useEffect(() => {
+    // Destroy old map instance when binLocation changes
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
       link.id = "leaflet-css";
@@ -63,7 +65,7 @@ function BinMap() {
       const L = window.L;
 
       const map = L.map(mapRef.current, {
-        center: [BIN_LOCATION.lat, BIN_LOCATION.lng],
+        center: [binLocation.lat, binLocation.lng],
         zoom: 17,
         scrollWheelZoom: false,
       });
@@ -100,16 +102,16 @@ function BinMap() {
         popupAnchor: [0, -38],
       });
 
-      L.marker([BIN_LOCATION.lat, BIN_LOCATION.lng], { icon: binIcon })
+      L.marker([binLocation.lat, binLocation.lng], { icon: binIcon })
         .addTo(map)
         .bindPopup(
           `
           <div style="font-family: sans-serif; min-width: 160px;">
             <div style="font-weight: 700; color: #2D4A22; font-size: 14px; margin-bottom: 4px;">
-              📍 ${BIN_LOCATION.name}
+              📍 ${binLocation.name}
             </div>
             <div style="color: #6b7280; font-size: 12px; line-height: 1.4;">
-              ${BIN_LOCATION.description}
+              ${binLocation.description}
             </div>
             <div style="
               margin-top: 8px;
@@ -124,7 +126,7 @@ function BinMap() {
             ">Collection Bin</div>
           </div>
         `,
-          { maxWidth: 220 },
+          { maxWidth: 220 }
         )
         .openPopup();
     };
@@ -144,7 +146,7 @@ function BinMap() {
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [binLocation]);
 
   return (
     <div className="map-container w-full h-96 lg:h-[520px] relative">
@@ -165,9 +167,11 @@ function BinMap() {
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { homepage } = useSiteContent();
   const [heroVisible, setHeroVisible] = useState(false);
 
   useEffect(() => {
@@ -175,11 +179,14 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, []);
 
+  const { hero, howItWorks, binLocation, joinMovement } = homepage;
+
   const handleGetStarted = () => navigate(user ? "/dashboard" : "/register");
   const handleLoginRedirect = () => navigate(user ? "/dashboard" : "/login");
 
   return (
     <main className="overflow-hidden">
+
       {/* ── HERO ── */}
       <section className="relative min-h-screen bg-hero-pattern flex flex-col items-center justify-center px-6 pt-20">
         <div className="absolute top-24 left-8 w-32 h-32 rounded-full bg-eco-200/40 blur-2xl animate-float pointer-events-none" />
@@ -197,14 +204,13 @@ export default function HomePage() {
         >
           <div className="inline-flex items-center gap-2 mb-8">
             <span className="section-tag">
-              <Leaf className="w-3 h-3" />A Sustainable Initiative by Enactus
-              NSUT
+              <Leaf className="w-3 h-3" />{hero.tagline}
             </span>
           </div>
           <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl text-moss leading-[1.05] tracking-tight mb-6">
-            Project{" "}
+            {hero.headline.split(' ').slice(0, -1).join(' ')}{" "}
             <span className="relative inline-block">
-              <span className="text-gradient-eco">ECHO</span>
+              <span className="text-gradient-eco">{hero.headline.split(' ').slice(-1)[0]}</span>
               <svg
                 className="absolute -bottom-2 left-0 w-full"
                 viewBox="0 0 200 8"
@@ -223,25 +229,22 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="font-body text-bark/60 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-4">
-            <span className="font-semibold text-leaf">
-              E-Waste Collection Hub Operation
-            </span>
+            <span className="font-semibold text-leaf">{hero.subtitle}</span>
           </p>
           <p className="font-body text-bark/55 text-base sm:text-lg leading-relaxed max-w-xl mx-auto mb-10">
-            Transform your e-waste into eco-points. Join the sustainable
-            revolution at NSUT.
+            {hero.body}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={handleGetStarted}
               className="btn-primary text-base group"
             >
-              Get Started
+              {hero.ctaPrimary}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
             <a href="#map" className="btn-secondary text-base group">
               <MapPin className="w-4 h-4" />
-              View Bin Location
+              {hero.ctaMap}
             </a>
           </div>
         </div>
@@ -263,14 +266,14 @@ export default function HomePage() {
               Campus Location
             </span>
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-moss mt-4 mb-3">
-              Find the Collection Bin
+              {binLocation.mapHeading}
             </h2>
             <p className="font-body text-bark/55 text-base max-w-md mx-auto">
-              Drop off your e-waste at the Administrative Block on NSUT campus.
+              {binLocation.mapSubtext}
             </p>
           </div>
 
-          <BinMap />
+          <BinMap binLocation={binLocation} />
 
           {/* Single location card */}
           <div className="mt-6 flex justify-center">
@@ -280,64 +283,43 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="font-display font-semibold text-sm text-moss">
-                  {BIN_LOCATION.name}
+                  {binLocation.name}
                 </p>
                 <p className="font-body text-xs text-bark/55 mt-0.5">
-                  {BIN_LOCATION.description}
+                  {binLocation.description}
                 </p>
               </div>
             </div>
           </div>
         </div>
       </section>
-      {/* ── STATS SECTION ──
-      <section ref={statsRef} className="py-20 bg-cream px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            <StatCard number={6}   suffix=""    label="Collection Bins"      icon={Recycle}   delay={0}   visible={statsVisible} />
-            <StatCard number={500} suffix="+"   label="Students Engaged"     icon={Users}     delay={100} visible={statsVisible} />
-            <StatCard number={100} suffix="kg+" label="E-waste Collected"    icon={Zap}       delay={200} visible={statsVisible} />
-            <StatCard number={5}   suffix="+"   label="Partner Organizations" icon={Building2} delay={300} visible={statsVisible} />
-          </div>
-        </div>
-      </section> */}
+
       {/* ── HOW IT WORKS ── */}
       <section className="py-24 bg-cream px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <span className="section-tag mb-4 inline-flex">
               <Leaf className="w-3 h-3" />
-              The Process
+              {howItWorks.sectionTag}
             </span>
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-moss mt-4 mb-3">
-              How It Works
+              {howItWorks.heading}
             </h2>
             <p className="font-body text-bark/55 text-base max-w-md mx-auto">
-              Simple steps to contribute to a sustainable campus
+              {howItWorks.subheading}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            <StepCard
-              number={1}
-              icon={MapPin}
-              title="Deposit E-Waste"
-              description="Drop your electronic waste at the Administrative Block collection bin on campus."
-              color="bg-moss"
-            />
-            <StepCard
-              number={2}
-              icon={Coins}
-              title="Earn Points"
-              description="Log your submission and earn eco-points based on the type and quantity of e-waste deposited."
-              color="bg-leaf"
-            />
-            <StepCard
-              number={3}
-              icon={Gift}
-              title="Redeem Rewards"
-              description="Exchange your points for exclusive coupons and rewards from our partner brands."
-              color="bg-eco-500"
-            />
+            {(howItWorks.steps ?? []).map((step, i) => (
+              <StepCard
+                key={i}
+                number={i + 1}
+                icon={STEP_ICONS[i] ?? Recycle}
+                title={step.title}
+                description={step.description}
+                color={STEP_COLORS[i] ?? "bg-moss"}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -362,45 +344,39 @@ export default function HomePage() {
               Take Action
             </span>
             <h2 className="font-display font-bold text-3xl sm:text-4xl text-cream mb-3">
-              Join the Movement
+              {joinMovement.heading}
             </h2>
             <p className="font-body text-cream/65 text-base max-w-md mx-auto">
-              Together, we can make NSUT a model for sustainable e-waste
-              management
+              {joinMovement.subheading}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <div className="bg-cream/10 backdrop-blur-sm border border-cream/15 rounded-3xl p-8 hover:bg-cream/15 transition-all duration-300 group">
-              <div className="w-12 h-12 bg-eco-500/20 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-eco-500/30 transition-colors duration-300">
-                <Users className="w-6 h-6 text-eco-300" strokeWidth={1.5} />
-              </div>
-              <h3 className="font-display font-semibold text-xl text-cream mb-3">
-                For Students
-              </h3>
-              <p className="font-body text-cream/65 text-sm leading-relaxed">
-                Earn rewards while contributing to environmental sustainability.
-                Track your impact and compete with peers.
-              </p>
-            </div>
-            <div className="bg-cream/10 backdrop-blur-sm border border-cream/15 rounded-3xl p-8 hover:bg-cream/15 transition-all duration-300 group">
-              <div className="w-12 h-12 bg-eco-500/20 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-eco-500/30 transition-colors duration-300">
-                <Building2 className="w-6 h-6 text-eco-300" strokeWidth={1.5} />
-              </div>
-              <h3 className="font-display font-semibold text-xl text-cream mb-3">
-                For Campus
-              </h3>
-              <p className="font-body text-cream/65 text-sm leading-relaxed">
-                Creating awareness about proper e-waste disposal and building a
-                culture of environmental responsibility.
-              </p>
-            </div>
+            {(joinMovement.cards ?? []).map((card, i) => {
+              const CardIcon = i === 0 ? Users : Building2;
+              return (
+                <div
+                  key={i}
+                  className="bg-cream/10 backdrop-blur-sm border border-cream/15 rounded-3xl p-8 hover:bg-cream/15 transition-all duration-300 group"
+                >
+                  <div className="w-12 h-12 bg-eco-500/20 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-eco-500/30 transition-colors duration-300">
+                    <CardIcon className="w-6 h-6 text-eco-300" strokeWidth={1.5} />
+                  </div>
+                  <h3 className="font-display font-semibold text-xl text-cream mb-3">
+                    {card.title}
+                  </h3>
+                  <p className="font-body text-cream/65 text-sm leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+              );
+            })}
           </div>
           <div className="text-center">
             <button
               onClick={handleLoginRedirect}
               className="inline-flex items-center gap-3 bg-cream text-moss font-display font-semibold text-base px-8 py-4 rounded-full hover:bg-eco-100 transition-all duration-300 hover:shadow-2xl hover:shadow-moss/30 hover:-translate-y-0.5 group"
             >
-              Start Contributing Today
+              {joinMovement.ctaLabel}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </button>
           </div>

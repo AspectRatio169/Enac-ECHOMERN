@@ -187,5 +187,22 @@ export async function declineInvite(inviteId) {
 }
 
 export async function getGroupAchievements(groupId) {
-  return _call("GET", `/api/groups/${groupId}/achievements`);
+  return _call('GET', `/api/groups/${groupId}/achievements`)
+}
+
+// ── CMS ───────────────────────────────────────────────────
+export async function getCmsContent(key) {
+  // Public — no auth token needed
+  const res = await fetch(`${API_URL}/api/cms/${key}`)
+  const data = await res.json()
+  if (!data.success) throw new Error(data.error || 'Server error.')
+  return data.data
+}
+
+export async function updateCmsContent(key, data) {
+  return _call('PUT', `/api/cms/${key}`, { data })
+}
+
+export async function seedCmsContent() {
+  return _call('POST', '/api/cms/seed', {})
 }
