@@ -98,6 +98,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("echo_jwt", data.token);
     setUser(data.user);
     setProfile(data.user);
+    return data.user;
   }
 
   // ─────────────────────────────────
@@ -114,7 +115,12 @@ export function AuthProvider({ children }) {
   // SET PASSWORD (from Settings)
   // ─────────────────────────────────
   async function setPassword(password) {
-    await authFetch("POST", "/api/auth/set-password", { password });
+    const data = await authFetch("POST", "/api/auth/set-password", { password });
+    if (data.user) {
+      setUser(data.user);
+      setProfile(data.user);
+    }
+    return data;
   }
 
   // ─────────────────────────────────

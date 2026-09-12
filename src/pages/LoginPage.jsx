@@ -14,14 +14,15 @@ import { useAuth } from "../lib/useAuth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginPassword, requestOTP, verifyOTP, loginGoogle } = useAuth();
+  const { loginPassword, requestOTP, verifyOTP, loginGoogle, setPassword: changePassword } = useAuth();
 
-  // "password" | "otp-request" | "otp-verify"
+  // "password" | "otp-request" | "otp-verify" | "force-reset"
   const [mode, setMode] = useState("password");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -64,10 +65,30 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await verifyOTP(email.trim().toLowerCase(), otpCode.trim());
-      navigate("/dashboard");
+      const user = await verifyOTP(email.trim().toLowerCase(), otpCode.trim());
+      if (user?.requiresPasswordChange) {
+        setInfo("Please set a new password.");
+        setMode("force-reset");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.message || "Invalid or expired code.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Force password reset ────────────────────────────────
+  async function handleSetPassword(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await changePassword(newPassword);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Failed to set password.");
     } finally {
       setLoading(false);
     }
@@ -178,19 +199,12 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-eco-100" />
-                <span className="font-mono text-xs text-bark/35">or</span>
-                <div className="flex-1 h-px bg-eco-100" />
-              </div>
-
               <button
                 onClick={() => { setError(""); setMode("otp-request"); }}
-                className="w-full flex items-center justify-center gap-2 border-2 border-eco-100 rounded-2xl py-3 font-display font-semibold text-sm text-bark/70 hover:border-moss/40 hover:text-moss transition-all duration-200"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-display font-semibold text-xs text-bark/70 hover:border-moss/40 hover:text-moss transition-all duration-200"
               >
-                <KeyRound className="w-4 h-4" />
-                Sign in with OTP instead
+                <KeyRound className="w-3 h-3" />
+                Forgot Password?
               </button>
             </>
           )}
@@ -232,7 +246,7 @@ export default function LoginPage() {
                   ) : (
                     <span className="flex items-center gap-2">
                       <Send className="w-4 h-4" />
-                      Send OTP Code
+                      Send Reset Code
                     </span>
                   )}
                 </button>
@@ -242,7 +256,7 @@ export default function LoginPage() {
                 onClick={() => { setError(""); setMode("password"); }}
                 className="w-full text-center font-body text-sm text-bark/50 hover:text-moss mt-5 transition-colors"
               >
-                ← Use password instead
+                ← Back to login
               </button>
             </>
           )}
@@ -292,7 +306,7 @@ export default function LoginPage() {
                   ) : (
                     <span className="flex items-center gap-2">
                       <KeyRound className="w-4 h-4" />
-                      Verify & Sign In
+                      Verify Code
                     </span>
                   )}
                 </button>
@@ -304,6 +318,56 @@ export default function LoginPage() {
               >
                 ← Resend code
               </button>
+            </>
+          )}
+
+          {/* ── FORCE RESET MODE ───────────────────────────────── */}
+          {mode === "force-reset" && (
+            <>
+              {info && (
+                <div className="bg-eco-50 border border-eco-100 text-moss rounded-2xl p-4 mb-5 font-body text-sm">
+                  {info}
+                </div>
+              )}
+              <form onSubmit={handleSetPassword} className="space-y-5">
+                <div>
+                  <label className="font-display font-medium text-sm text-bark/70 mb-2 block">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-bark/40" />
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full pl-11 pr-4 py-3.5 border-2 border-eco-100 rounded-2xl font-body text-sm text-bark focus:outline-none focus:border-moss transition-colors duration-200 bg-cream/50"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || newPassword.length < 6}
+                  className="w-full btn-primary justify-center py-3.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Updating...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4" />
+                      Set New Password
+                    </span>
+                  )}
+                </button>
+              </form>
             </>
           )}
 
