@@ -20,7 +20,7 @@ function SponsorStrip({ sponsorships }) {
                 <img
                   src={s.logoUrl}
                   alt={s.name}
-                  className="max-h-10 max-w-[120px] object-contain filter brightness-0 invert"
+                  className="max-h-10 max-w-[120px] object-contain"
                 />
               ) : (
                 <span className="font-display font-semibold text-sm text-cream/70">
